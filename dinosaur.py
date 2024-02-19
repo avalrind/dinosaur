@@ -1,82 +1,186 @@
-import matplotlib.pyplot as plt 
-from matplotlib.animation import FuncAnimation
-from IPython.display import HTML
 import numpy as np
+from PIL import Image , ImageDraw
 
-def lineplot(x_data , y_data , x_label = '' , y_label = '' , title = '') : 
+def fig_to_np_array(fig):
+    '''
+    Convert Figure to Numpy Array
 
-    figure , axes = plt.subplots()
-    x_temp = []
-    y_temp = []
-    ln , = plt.plot(
-        [] , 
-        [] , 
-        'y-' , 
-        linewidth = 3
-    )
+    Args :
+    
+        1) fig : Figure
+            Figure to Convert
 
-    axes.spines['right'].set_visible(False)
-    axes.spines['top'].set_visible(False)
+    Returns :
+    
+        1) buf : Numpy Array
+            Numpy Array of the Figure
+    '''
+    
+    fig.canvas.draw()
 
-    axes.spines['left'].set_linewidth(3)  # Set the thickness of the left spine
-    axes.spines['bottom'].set_linewidth(3)  # Set the thickness of the bottom spine
+    w, h = fig.canvas.get_width_height()
+    buf = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8)
+    buf.shape = (h, w, 3)
 
-    axes.spines['left'].set_position('zero')
-    axes.spines['bottom'].set_position('zero')
+    return buf
 
-    axes.xaxis.set_ticks_position('bottom')
-    axes.yaxis.set_ticks_position('left')
+def norm(value , max_value , min_value) : 
+    '''
+    Normalize Value
 
-    figure.set_facecolor('black')
-    axes.set_facecolor('black')
+    Args :
 
-    axes.spines['left'].set_color('white')
-    axes.spines['bottom'].set_color('white')
+        1) value : Float
+            Value to Normalize
 
-    axes.tick_params(colors='white')
+        2) max_value : Float
+            Maximum Value
 
-    def init() : 
+        3) min_value : Float
+            Minimum Value
 
-        axes.set_xlim(0 , max(x_data))
-        axes.set_ylim(0 , max(y_data))
+    Returns :
 
-        return ln ,
+        1) norm_value : Float
+    '''
 
-    def update(frame) : 
+    return (value - min_value) / (max_value - min_value)
 
-        x_temp.append(x_tempe[frame])
-        y_temp.append(y_tempe[frame])
+def get_png(figure) :
+    '''
+    Get PNG from Figure
 
-        axes.margins(x=0, y=0)
+    Args :
 
-        ln.set_data(x_temp , y_temp)
+        1) figure : Figure
+            Figure to Convert
 
-        return ln,
+    Returns :
 
-    offsets = 5
+        1) image : Image
+            Image of the Figure
+    '''
 
-    x_tempe = []
-    y_tempe = []
+    figure = fig_to_np_array(figure)
+    image = Image.new('RGB' , (figure.shape[1] , figure.shape[0]))
+    draw = ImageDraw.Draw(image)
 
-    for index in range(len(x_data)) : 
+    for row in range(figure.shape[0]) :
 
-        if index < offsets or index > len(x_data) - offsets : 
-            
-            x_tempe.extend([x_data[index]] * 5)
-            y_tempe.extend([y_data[index]] * 5)
+        for col in range(figure.shape[1]) :
 
-        else : 
+            if figure[row][col][0] != 0 : draw.point((col , row) , fill = (figure[row][col][0] , figure[row][col][1] , figure[row][col][2]))
 
-            x_tempe.append(x_data[index])
-            y_tempe.append(y_data[index])
+    return image
 
-    ani = FuncAnimation(
-        figure , 
-        update , 
-        frames = range(len(x_tempe)) , 
-        init_func = init , 
-        blit = True , 
-        interval = 200
-    )
+def map_to_pixels(points , width , height , width_pad , height_pad , dpi) :
+    '''
+    Map Points to Pixels
 
-    return HTML(ani.to_jshtml())
+    Args :
+
+        1) points : List
+            List of Points
+        
+        2) width : Int
+            Width of the Image
+
+        3) height : Int
+            Height of the Image
+
+        4) width_pad : Int
+            Width Padding
+
+        5) height_pad : Int
+            Height Padding
+
+        6) dpi : Int
+            Dots per Inch
+    '''
+
+    x_points = [x for x , _ in points]
+    y_points = [y for _ , y in points]
+    x_max = max(x_points)
+    y_max = max(y_points)
+    x_min = min(x_points)
+    y_min = min(y_points)
+
+    x_max += 0.005 * x_max * dpi
+    y_max += 0.005 * y_max * dpi
+
+    pixel_points = []
+
+    for x , y in points :
+
+        x_norm = norm(x , x_max , x_min)
+        y_norm = norm(y , y_max , y_min)
+
+        x_scale = x_norm * width
+        y_scale = y_norm * height
+
+        y_scale = height - y_scale # PIL starts from top-left 
+
+        x_scale += width_pad
+        y_scale -= height_pad
+
+        pixel_points.append((
+            x_scale , 
+            y_scale 
+))
+
+    return pixel_points
+
+def get_pixels(point , 
+               right_pad , left_pad , 
+               up_pad , down_pad) : 
+    '''
+    Get Pixels
+
+    Args :
+
+        1) point : Tuple
+            Point
+
+        2) right_pad : Int
+            Right Padding
+
+        3) left_pad : Int
+            Left Padding
+
+        4) up_pad : Int
+            Up Padding
+
+        5) down_pad : Int
+            Down Padding
+
+    Returns :
+    
+            1) pixels : List
+                List of Pixels
+    '''
+
+    pixels = [point]
+
+    for padding in range(right_pad + 1) : pixels.append((point[0] + padding , point[1]))
+    for padding in range(left_pad + 1) : pixels.append((point[0] - padding , point[1]))
+    for padding in range(up_pad + 1) : pixels.append((point[0] , point[1] + padding))
+    for padding in range(down_pad + 1) : pixels.append((point[0] , point[1] - padding))
+
+    x_set = set([
+        pixel[0]
+        for pixel
+        in pixels
+    ])
+    y_set = set([
+        pixel[1]
+        for pixel
+        in pixels
+    ])
+
+    pixels = [
+        (x_cor , y_cor)
+        for x_cor in x_set
+        for y_cor in y_set
+    ]
+
+    return pixels
