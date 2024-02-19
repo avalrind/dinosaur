@@ -12,7 +12,7 @@ from helper import (
 
 import numpy as np
 
-def lineplot(x_data , y_data ,
+def lineplot(x_data , y_data = None ,
              linewidth = 3 , beautify = True ,
              figsize = (10 , 6) , dpi = 72 , fps = 25 ,
              right_pad = 0 , left_pad = 0 , up_pad = 0 , down_pad = 0 ,
@@ -66,6 +66,8 @@ def lineplot(x_data , y_data ,
     '''
 
     figure , axes = plt.subplots(figsize = figsize , dpi = dpi)
+
+    if not y_data : y_data = list(range(len(x_data)))
 
     if beautify :
         axes.spines['right'].set_visible(False)
