@@ -1,25 +1,78 @@
-import matplotlib.pyplot as plt 
-from matplotlib.animation import FuncAnimation
-from IPython.display import HTML
+import matplotlib.pyplot as plt
+from moviepy.editor import ImageSequenceClip
+from PIL import ImageDraw
+import numpy as np
+from copy import deepcopy
+
+from helper import (
+    get_png , 
+    map_to_pixels , 
+    get_pixels
+)
+
 import numpy as np
 
-def lineplot(x_data , y_data , x_label = '' , y_label = '' , title = '') : 
+def lineplot(x_data , y_data ,
+             linewidth = 3 , beautify = True ,
+             figsize = (10 , 6) , dpi = 72 , fps = 25 ,
+             right_pad = 0 , left_pad = 0 , up_pad = 0 , down_pad = 0 ,
+             rgb = (255 , 255 , 255)) :
+    
+    '''
+    Line Plot Animation Function for Dinosaur
 
-    figure , axes = plt.subplots()
-    x_temp = []
-    y_temp = []
-    ln , = plt.plot(
-        [] , 
-        [] , 
-        'y-' , 
-        linewidth = 3
-    )
+    Args : 
 
-    axes.spines['right'].set_visible(False)
-    axes.spines['top'].set_visible(False)
+        1) x_data : Iterable  
+            X - Axis Data
 
-    axes.spines['left'].set_linewidth(3)  # Set the thickness of the left spine
-    axes.spines['bottom'].set_linewidth(3)  # Set the thickness of the bottom spine
+        2) y_data : Iterable
+            Y - Axis Data
+
+        3) linewidth : int
+            Width of the Axes Line
+
+        4) beautify : bool
+            If True , Beautify the Plot
+
+        5) figsize : Tuple
+            Size of the Figure
+
+        6) dpi : int
+            Dots per Inch
+
+        7) fps : int
+            Frames per Second
+
+        8) right_pad : int
+            Width to the Right of the Point
+
+        9) left_pad : int
+            Width to the Left of the Point
+
+        10) up_pad : int
+            Width to the Up of the Point
+
+        11) down_pad : int 
+            Width to the Down of the Point
+
+        12) rgb : Tuple
+            RGB Color of the Line
+        
+    Returns :
+    
+            1) Animation
+                Line Plot Animation
+    '''
+
+    figure , axes = plt.subplots(figsize = figsize , dpi = dpi)
+
+    if beautify :
+        axes.spines['right'].set_visible(False)
+        axes.spines['top'].set_visible(False)
+
+    axes.spines['left'].set_linewidth(linewidth)
+    axes.spines['bottom'].set_linewidth(linewidth)
 
     axes.spines['left'].set_position('zero')
     axes.spines['bottom'].set_position('zero')
@@ -35,48 +88,43 @@ def lineplot(x_data , y_data , x_label = '' , y_label = '' , title = '') :
 
     axes.tick_params(colors='white')
 
-    def init() : 
+    axes.set_xlim(0 , max(x_data))
+    axes.set_ylim(0 , max(y_data))
 
-        axes.set_xlim(0 , max(x_data))
-        axes.set_ylim(0 , max(y_data))
+    points = [
+        (x , y)
+        for x , y
+        in zip(x_data , y_data)
+    ]
 
-        return ln ,
+    height = (figsize[0]) * dpi
+    width = (figsize[1]) * dpi
 
-    def update(frame) : 
+    points = map_to_pixels(points , height , width , width_pad = (dpi * figsize[0]) / 7.2 , height_pad = (figsize[1] * dpi) / 8.64 , dpi = dpi)
+    plane_mask = get_png(figure)
 
-        x_temp.append(x_tempe[frame])
-        y_temp.append(y_tempe[frame])
+    anim_array = [plane_mask]
 
-        axes.margins(x=0, y=0)
+    for point in points  :
 
-        ln.set_data(x_temp , y_temp)
+        temp_plane_mask = deepcopy(plane_mask)
 
-        return ln,
+        draw = ImageDraw.Draw(temp_plane_mask)
 
-    offsets = 5
+        pixels = get_pixels(point , right_pad , left_pad , up_pad , down_pad)
 
-    x_tempe = []
-    y_tempe = []
+        for point in pixels : draw.point(point , fill = (rgb[0] , rgb[1] , rgb[2]))
 
-    for index in range(len(x_data)) : 
+        anim_array.append(temp_plane_mask)
 
-        if index < offsets or index > len(x_data) - offsets : 
-            
-            x_tempe.extend([x_data[index]] * 5)
-            y_tempe.extend([y_data[index]] * 5)
+        plane_mask = deepcopy(temp_plane_mask)
 
-        else : 
+    anim_array = [np.array(val) for val in anim_array]
 
-            x_tempe.append(x_data[index])
-            y_tempe.append(y_data[index])
+    images = [np.uint8(frame[..., ::-1]) for frame in anim_array]
 
-    ani = FuncAnimation(
-        figure , 
-        update , 
-        frames = range(len(x_tempe)) , 
-        init_func = init , 
-        blit = True , 
-        interval = 200
-    )
+    clip = ImageSequenceClip(images, fps=fps)
 
-    return HTML(ani.to_jshtml())
+    del images , anim_array
+
+    return clip.ipython_display(fps=10, autoplay=True, loop=True)
