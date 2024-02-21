@@ -1,0 +1,13 @@
+LICENSE
+setup.py
+dinasour/src/dinasour.egg-info/PKG-INFO
+dinasour/src/dinasour.egg-info/SOURCES.txt
+dinasour/src/dinasour.egg-info/dependency_links.txt
+dinasour/src/dinasour.egg-info/requires.txt
+dinasour/src/dinasour.egg-info/top_level.txt
+dinasour/src/dinasour.py
+dinasour/src/dinasour.egg-info/PKG-INFO
+dinasour/src/dinasour.egg-info/SOURCES.txt
+dinasour/src/dinasour.egg-info/dependency_links.txt
+dinasour/src/dinasour.egg-info/requires.txt
+dinasour/src/dinasour.egg-info/top_level.txt
